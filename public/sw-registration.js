@@ -15,6 +15,20 @@ const registerServiceWorker = async () => {
       console.error(`Registration failed with ${error}`)
     }
   }
+
+  if (!(Notification in window)) {
+    throw new Error('No support for notification API')
+  }
+}
+
+const requestNotificationPermission = async () => {
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') {
+    throw new Error('Notifications permission not granted')
+  } else {
+    new Notification('Hello World')
+  }
 }
 
 registerServiceWorker()
+requestNotificationPermission()
