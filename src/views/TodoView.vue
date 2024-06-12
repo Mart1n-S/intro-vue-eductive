@@ -14,46 +14,50 @@
   </div>
 </template>
 <script setup lang="ts">
-import TodoList from '@/components/TodoList.vue'
-import { useTodoListStore } from '@/stores/todolist'
-import axiosInstance from '@/modules/axios'
-import { ref, type Ref } from 'vue'
-import type { Todo } from '@/models/Todo'
-const show = ref<boolean>(true)
-const todoStore = useTodoListStore()
-const todoTitle: Ref<string> = ref('')
+import TodoList from '@/components/TodoList.vue';
+import { useTodoListStore } from '@/stores/todolist';
+import axiosInstance from '@/modules/axios';
+import { ref, type Ref } from 'vue';
+import type { Todo } from '@/models/Todo';
+import { saveTodos, loadTodos } from '@/utils/indexedDB';
+
+const show = ref<boolean>(true);
+const todoStore = useTodoListStore();
+const todoTitle: Ref<string> = ref('');
 
 function addTodo() {
-  todoStore.createTodo(todoTitle.value)
-  todoTitle.value = ''
+  todoStore.createTodo(todoTitle.value);
+  todoTitle.value = '';
 }
 
-const storageKey = '_todoApp'
-
-function save() {
-  window.localStorage.setItem(storageKey, JSON.stringify(todoStore.todoList))
+async function save() {
+  console.log('e')
+  try {
+    await saveTodos(todoStore.todoList);
+    console.log('Todos saved to IndexedDB');
+  } catch (error) {
+    console.error('Failed to save todos to IndexedDB', error);
+  }
 }
 
-// TODO : comment code
-function load() {
-  // const list = window.localStorage.getItem(storageKey)
-  // if (list !== null) {
-  //   todoStore.todoList = JSON.parse(list)
-  // }
-  console.log('Début de la requête')
-  axiosInstance
-    .get<Todo[]>('/todos')
-    .then((response) => {
-      console.log('résolution de la promesse')
-      console.log(response.data)
-      todoStore.todoList = response.data
-    })
-    .catch((err) => {
-      console.log(err.data)
-    })
-    .finally(() => {
-      console.log('Bout de code toujours executé')
-    })
-  console.log('après la requête')
+async function load() {
+  try {
+    const todos = await loadTodos();
+    if (todos.length > 0) {
+      todoStore.todoList = todos;
+      console.log('Todos loaded from IndexedDB');
+    } else {
+      console.log('Début de la requête');
+      const response = await axiosInstance.get<Todo[]>('/todos');
+      console.log('résolution de la promesse');
+      console.log(response.data);
+      todoStore.todoList = response.data;
+      await saveTodos(response.data);
+    }
+  } catch (error) {
+    console.error('Failed to load todos from IndexedDB or API', error);
+  } finally {
+    console.log('Bout de code toujours executé');
+  }
 }
 </script>
